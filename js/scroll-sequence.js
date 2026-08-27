@@ -1,7 +1,13 @@
 /**
- * Scroll-driven frame-by-frame animation (Apple product-page technique).
- * Scroll position maps to a frame index in a preloaded image sequence,
- * drawn on a <canvas> pinned via position: sticky.
+ * Hero — séquence image par image pilotée par le SCROLL DE PAGE.
+ *
+ * Règle absolue respectée ici :
+ *   - aucun preventDefault sur wheel / touchmove / scroll
+ *   - aucune écriture de scrollTop / scrollTo / scrollBy
+ *   - aucun conteneur scrollable qui intercepte le geste
+ *   - `position: sticky` est purement visuel (CSS), pas un mécanisme de capture
+ *   - ScrollTrigger (scrub) LIT la position de scroll, il ne l'écrit jamais.
+ *     On n'utilise pas `pin`, pour rester sur du sticky CSS pur.
  */
 (function () {
   "use strict";
@@ -9,72 +15,65 @@
   var FRAME_DIR = "assets/frames/";
   var FRAME_COUNT_MAX = 300;
   var MISSING_FRAMES = [64, 65];
-  var FRAME_STEP_PX = 12; // scroll px "spent" per frame, before clamping
   var MAX_DPR = 2;
+  var SPARK_COUNT = 22;
 
-  var frameUrls = buildFrameList();
-
-  var section = document.getElementById("boutique");
-  var sticky = section.querySelector(".frame-sequence__sticky");
-  var canvas = document.getElementById("frameCanvas");
+  var section = document.getElementById("pack");
+  var stage = section.querySelector(".pack-stage");
+  var shake = document.getElementById("packShake");
+  var canvas = document.getElementById("packCanvas");
   var ctx = canvas.getContext("2d");
   var loader = document.getElementById("loader");
   var loaderFill = document.getElementById("loaderFill");
   var loaderPct = document.getElementById("loaderPct");
-  var progressFill = document.getElementById("scrollProgressFill");
-  var scrollHint = document.getElementById("scrollHint");
-  var captions = [
-    { el: document.getElementById("capStart"), from: 0, to: 0.12 },
-    { el: document.getElementById("capMid"), from: 0.32, to: 0.6 },
-    { el: document.getElementById("capEnd"), from: 0.86, to: 1.01 }
-  ];
+  var railFill = document.getElementById("packRailFill");
+  var burst = document.getElementById("packBurst");
+  var flash = document.getElementById("packFlash");
+  var rays = document.getElementById("packRays");
+  var stampSealed = document.getElementById("stampSealed");
+  var stampChecked = document.getElementById("stampChecked");
+  var caps = Array.prototype.slice.call(section.querySelectorAll(".pack-cap"));
 
+  var frameUrls = buildFrameList();
   var images = [];
-  var currentFrameIndex = -1;
-  var ready = false;
-  var ticking = false;
-  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var drawnIndex = -1;
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function buildFrameList() {
     var urls = [];
     for (var n = 1; n <= FRAME_COUNT_MAX; n++) {
       if (MISSING_FRAMES.indexOf(n) !== -1) continue;
-      var padded = String(n).padStart(3, "0");
-      urls.push(FRAME_DIR + "frame-" + padded + ".jpg");
+      urls.push(FRAME_DIR + "frame-" + String(n).padStart(3, "0") + ".jpg");
     }
     return urls;
   }
 
-  function setSectionHeight() {
-    var vh = window.innerHeight;
-    var scrollDistance = Math.min(vh * 6, Math.max(vh * 3, frameUrls.length * FRAME_STEP_PX));
-    section.style.height = Math.round(vh + scrollDistance) + "px";
-  }
+  /* ---------- canvas ---------- */
 
   function resizeCanvas() {
     var dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-    var w = sticky.clientWidth;
-    var h = sticky.clientHeight;
+    var w = stage.clientWidth;
+    var h = stage.clientHeight;
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
-    if (currentFrameIndex >= 0) drawFrame(currentFrameIndex, true);
+    if (drawnIndex >= 0) drawFrame(drawnIndex, true);
   }
 
   function drawFrame(index, force) {
-    if (index === currentFrameIndex && !force) return;
+    if (index === drawnIndex && !force) return;
     var img = images[index];
     if (!img || !img.complete || !img.naturalWidth) return;
 
-    currentFrameIndex = index;
+    drawnIndex = index;
 
     var cw = canvas.width;
     var ch = canvas.height;
     var canvasRatio = cw / ch;
     var imgRatio = img.naturalWidth / img.naturalHeight;
-
     var sx, sy, sw, sh;
+
     if (imgRatio > canvasRatio) {
       sh = img.naturalHeight;
       sw = sh * canvasRatio;
@@ -91,45 +90,9 @@
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cw, ch);
   }
 
-  function updateCaptions(progress) {
-    for (var i = 0; i < captions.length; i++) {
-      var c = captions[i];
-      var visible = progress >= c.from && progress < c.to;
-      c.el.classList.toggle("is-visible", visible);
-    }
-  }
+  /* ---------- préchargement ---------- */
 
-  function onProgress() {
-    if (!ready) return;
-
-    var rect = section.getBoundingClientRect();
-    var vh = window.innerHeight;
-    var scrollableDistance = section.offsetHeight - vh;
-    var scrolled = clamp(-rect.top, 0, scrollableDistance);
-    var progress = scrollableDistance > 0 ? scrolled / scrollableDistance : 0;
-
-    var frameIndex = Math.round(progress * (images.length - 1));
-    drawFrame(frameIndex);
-
-    progressFill.style.width = (progress * 100).toFixed(1) + "%";
-    updateCaptions(progress);
-    scrollHint.classList.toggle("is-hidden", progress > 0.015);
-  }
-
-  function onScroll() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function () {
-      onProgress();
-      ticking = false;
-    });
-  }
-
-  function clamp(v, min, max) {
-    return Math.min(max, Math.max(min, v));
-  }
-
-  function preloadFrames() {
+  function preload() {
     return new Promise(function (resolve) {
       var loaded = 0;
       var total = frameUrls.length;
@@ -142,10 +105,7 @@
           var pct = Math.round((loaded / total) * 100);
           loaderFill.style.width = pct + "%";
           loaderPct.textContent = pct;
-          if (i === 0 && img.complete && img.naturalWidth) {
-            images[0] = img;
-            drawFrame(0, true);
-          }
+          if (i === 0) drawFrame(0, true);
           if (loaded === total) resolve();
         };
         img.src = src;
@@ -154,35 +114,136 @@
     });
   }
 
+  /* ---------- étincelles ---------- */
+
+  function buildSparks() {
+    var sparks = [];
+    var kinds = ["", " spark-red", " spark-pale"];
+    for (var i = 0; i < SPARK_COUNT; i++) {
+      var el = document.createElement("i");
+      el.className = "spark" + kinds[i % kinds.length];
+      burst.appendChild(el);
+      var angle = (i / SPARK_COUNT) * Math.PI * 2 + (i % 3) * 0.11;
+      var reach = 190 + (i % 5) * 62;
+      sparks.push({
+        el: el,
+        x: Math.cos(angle) * reach,
+        y: Math.sin(angle) * reach * 0.82 - 60
+      });
+    }
+    return sparks;
+  }
+
+  /* ---------- séquence maîtresse ---------- */
+
+  function buildTimeline() {
+    var proxy = { f: 0 };
+    var last = images.length - 1;
+
+    var tl = gsap.timeline({
+      defaults: { ease: "none" },
+      scrollTrigger: {
+        trigger: section,
+        start: "top top",
+        end: "bottom bottom",
+        scrub: true,              // lit le scroll, ne l'écrit jamais
+        invalidateOnRefresh: true,
+        onUpdate: function (self) {
+          railFill.style.width = (self.progress * 100).toFixed(2) + "%";
+        }
+      }
+    });
+
+    // Piste principale : la position de scroll choisit la frame (0 → 100).
+    tl.to(proxy, {
+      f: last,
+      duration: 100,
+      onUpdate: function () {
+        drawFrame(Math.round(proxy.f));
+      }
+    }, 0);
+
+    // Légendes d'étape — une seule à l'écran à la fois.
+    var windows = [[1, 15], [21, 39], [47, 67], [80, 99]];
+    caps.forEach(function (cap, i) {
+      var w = windows[i];
+      tl.fromTo(cap,
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 3, ease: "power2.out",
+          onStart: function () { cap.classList.add("is-on"); },
+          onReverseComplete: function () { cap.classList.remove("is-on"); } },
+        w[0]);
+      tl.to(cap, { opacity: 0, y: -12, duration: 3, ease: "power2.in" }, w[1]);
+    });
+
+    // Tampon SCELLÉ — coup sec avec dépassement.
+    tl.fromTo(stampSealed,
+      { opacity: 0, scale: 1.45, rotate: -13 },
+      { opacity: 1, scale: 1, rotate: -13, duration: 3, ease: "back.out(3)" }, 2);
+    tl.to(stampSealed, { opacity: 0, scale: 0.94, duration: 3 }, 17);
+
+    if (!reduced) {
+      // Étape 1 — vibration : le paquet s'agite avant de céder.
+      tl.to(shake, { x: -5, y: 3, duration: 1.6, ease: "power1.inOut" }, 3)
+        .to(shake, { x: 6, y: -3, duration: 1.6, ease: "power1.inOut" }, 6)
+        .to(shake, { x: -7, y: 4, duration: 1.6, ease: "power1.inOut" }, 9)
+        .to(shake, { x: 5, y: -4, duration: 1.6, ease: "power1.inOut" }, 12)
+        .to(shake, { x: 0, y: 0, duration: 2.4, ease: "power2.out" }, 15);
+
+      // Étape 2 — déchirure : éclat lumineux + rayons.
+      tl.fromTo(flash, { opacity: 0 }, { opacity: 0.85, duration: 2.5, ease: "power2.out" }, 24)
+        .to(flash, { opacity: 0, duration: 6, ease: "power2.in" }, 27);
+
+      tl.fromTo(rays,
+        { opacity: 0, scale: 0.72, rotate: 0 },
+        { opacity: 0.5, scale: 1.08, rotate: 14, duration: 22, ease: "power1.out" }, 30)
+        .to(rays, { opacity: 0, scale: 1.3, duration: 14, ease: "power1.in" }, 58);
+
+      // Étape 3 — éclat : les cartes/étincelles jaillissent.
+      var sparks = buildSparks();
+      sparks.forEach(function (s, i) {
+        tl.fromTo(s.el,
+          { opacity: 0, x: 0, y: 0, scale: 0.35, rotate: 0 },
+          { opacity: 1, x: s.x, y: s.y, scale: 1, rotate: (i % 2 ? 190 : -160),
+            duration: 20, ease: "power3.out" },
+          44 + (i % 6) * 0.7);
+        tl.to(s.el, { opacity: 0, scale: 0.5, duration: 12, ease: "power1.in" }, 66 + (i % 6) * 0.7);
+      });
+    }
+
+    // Étape 4 — stabilisation : tampon VÉRIFIÉ.
+    tl.fromTo(stampChecked,
+      { opacity: 0, scale: 1.5, rotate: 9 },
+      { opacity: 1, scale: 1, rotate: 9, duration: 4, ease: "back.out(2.6)" }, 82);
+
+    return tl;
+  }
+
+  /* ---------- resize ---------- */
+
   var resizeTimer = null;
   function onResize() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-      setSectionHeight();
       resizeCanvas();
-      onProgress();
-    }, 120);
+      if (window.ScrollTrigger) ScrollTrigger.refresh();
+    }, 140);
   }
 
+  /* ---------- init ---------- */
+
   function init() {
-    setSectionHeight();
     resizeCanvas();
-
-    preloadFrames().then(function () {
-      ready = true;
-      resizeCanvas();
-      onProgress();
-      loader.classList.add("is-done");
-    });
-
-    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
 
-    if (reducedMotion) {
-      // Scroll-scrubbing stays user-driven (not autoplay), but we skip
-      // the smooth CSS transitions on captions via the stylesheet's
-      // reduced-motion query — nothing else to disable here.
-    }
+    preload().then(function () {
+      resizeCanvas();
+      gsap.registerPlugin(ScrollTrigger);
+      buildTimeline();
+      ScrollTrigger.refresh();
+      loader.classList.add("is-done");
+      document.dispatchEvent(new CustomEvent("pack:ready"));
+    });
   }
 
   if (document.readyState === "loading") {
