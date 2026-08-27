@@ -15,7 +15,8 @@
 
     if (reduced) {
       // Pas de mouvement : tout est visible d'emblée.
-      gsap.set("[data-reveal], [data-stagger] > *, [data-pop], .gamme", { opacity: 1, y: 0, rotate: 0, scale: 1 });
+      gsap.set("[data-reveal], [data-stagger] > *, [data-pop], .gamme, .gamme-rank, .gamme-name, .gamme-copy, .gamme-go",
+        { opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 });
       splitTitle(true);
       return;
     }
@@ -91,15 +92,58 @@
     });
   }
 
-  /* ---------- gammes : entrée/sortie douce au passage ---------- */
+  /* ---------- gammes : cases de manga alternées ----------
+     Chaque case entre depuis SON côté, légèrement pivotée, précédée d'un
+     balayage de lignes de vitesse. Les éléments internes (numéro, nom,
+     description, bouton) arrivent en cascade et repartent à des vitesses
+     différentes pendant le scroll : rien ne bouge en bloc. */
 
   function revealGammes() {
     gsap.utils.toArray(".gamme").forEach(function (el) {
-      gsap.fromTo(el,
-        { opacity: 0, y: 46 },
+      var side = parseFloat(el.dataset.side) || -1;   // -1 = gauche, +1 = droite
+      var lines = el.querySelector(".gamme-lines");
+      var rank = el.querySelector(".gamme-rank");
+      var name = el.querySelector(".gamme-name");
+      var copy = el.querySelector(".gamme-copy");
+      var go = el.querySelector(".gamme-go");
+
+      var tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: el,
+          start: "top 82%",
+          toggleActions: "play none none reverse"
+        }
+      });
+
+      // le balayage de vitesse précède la case
+      tl.fromTo(lines,
+        { opacity: 0, x: side * 140, scaleX: 0.5 },
+        { opacity: 0.5, x: side * -30, scaleX: 1, duration: 0.42, ease: "power3.out" }, 0)
+        .to(lines, { opacity: 0, x: side * -90, duration: 0.5, ease: "power2.in" }, 0.34);
+
+      // la case tombe en place, penchée puis redressée
+      tl.fromTo(el,
+        { opacity: 0, x: side * 90, rotate: side * 3.5 },
+        { opacity: 1, x: 0, rotate: 0, duration: 0.62, ease: "back.out(1.5)" }, 0.06);
+
+      // contenu en cascade, chacun sa distance
+      tl.fromTo([rank, name, copy, go],
+        { opacity: 0, x: side * 34 },
+        { opacity: 1, x: 0, duration: 0.42, ease: "power2.out", stagger: 0.07 }, 0.2);
+
+      // dérive lente pendant tout le passage à l'écran : les couches internes
+      // ne défilent pas à la même vitesse que la case (profondeur)
+      gsap.fromTo([name, copy],
+        { y: 16 },
         {
-          opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
-          scrollTrigger: { trigger: el, start: "top 78%", end: "bottom 22%", toggleActions: "play none none reverse" }
+          y: -16, ease: "none",
+          scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: true }
+        });
+      gsap.fromTo(rank,
+        { y: 26 },
+        {
+          y: -26, ease: "none",
+          scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: true }
         });
     });
   }

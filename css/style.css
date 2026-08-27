@@ -371,62 +371,112 @@ img { max-width: 100%; display: block; }
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 0 clamp(1.25rem, 5vw, 3rem);
+  padding: 0 clamp(1.25rem, 5vw, 4rem);
   color: var(--paper);
+  /* `clip` borne les lignes de vitesse sans jamais créer de conteneur
+     scrollable — contrairement à `hidden`, il ne peut pas capter un geste. */
+  overflow-x: clip;
 }
 
+/* Chaque gamme est une case de manga : elle occupe un côté, penchée,
+   et le côté alterne pour que le regard zigzague au lieu de descendre droit. */
 .gamme {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  /* le texte se pose dans la bande basse : le paquet reste dégagé au centre */
-  justify-content: flex-end;
-  gap: 0.5rem;
-  min-height: 100svh;
-  padding-bottom: 9vh;
-  width: min(92vw, 620px);
-  text-align: center;
+  gap: 0.45rem;
+  min-height: 55svh;
+  justify-content: center;
+  width: min(88vw, 480px);
+  padding: clamp(1.2rem, 2.5vw, 1.8rem) clamp(1.3rem, 3vw, 2.2rem);
   will-change: transform, opacity;
 }
 
+.gamme--left  { align-self: flex-start; text-align: left;  align-items: flex-start; }
+.gamme--right { align-self: flex-end;   text-align: right; align-items: flex-end; }
+
+/* bord de case, tracé à l'encre */
+.gamme::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2.5px solid rgba(243, 235, 220, 0.5);
+  background: rgba(11, 11, 12, 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: -1;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.gamme--left::before  { border-radius: 3px 14px 3px 14px; }
+.gamme--right::before { border-radius: 14px 3px 14px 3px; }
+
+.gamme:hover::before {
+  border-color: var(--gold);
+  background: rgba(11, 11, 12, 0.55);
+}
+
+/* lignes de vitesse qui balaient derrière la case à l'entrée */
+.gamme-lines {
+  position: absolute;
+  top: 50%;
+  width: 62vw;
+  height: 130%;
+  transform: translateY(-50%);
+  z-index: -2;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(243, 235, 220, 0.42) 0 2px,
+    transparent 2px 13px
+  );
+}
+
+.gamme--left  .gamme-lines { left: -6vw;  mask-image: linear-gradient(to right, #000 0%, transparent 82%); -webkit-mask-image: linear-gradient(to right, #000 0%, transparent 82%); }
+.gamme--right .gamme-lines { right: -6vw; mask-image: linear-gradient(to left,  #000 0%, transparent 82%); -webkit-mask-image: linear-gradient(to left,  #000 0%, transparent 82%); }
+
 .gamme-rank {
   font-family: var(--heavy);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--gold);
+  will-change: transform;
 }
 
 .gamme-name {
   font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(2.6rem, 8vw, 5rem);
+  font-size: clamp(2.3rem, 6.5vw, 4.2rem);
   line-height: 0.95;
   letter-spacing: 0.02em;
   text-wrap: balance;
-  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.9);
-  transition: transform 0.2s ease, color 0.2s ease;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.8);
+  transition: color 0.2s ease;
+  will-change: transform;
 }
 
-.gamme:hover .gamme-name { transform: translateY(-4px); color: var(--gold); }
+.gamme:hover .gamme-name { color: var(--gold); }
 
 .gamme-copy {
-  max-width: 34ch;
-  font-size: clamp(0.95rem, 1.9vw, 1.05rem);
-  color: rgba(243, 235, 220, 0.85);
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.9);
+  max-width: 32ch;
+  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  color: rgba(243, 235, 220, 0.88);
+  will-change: transform;
 }
 
 .gamme-go {
   margin-top: 0.5rem;
-  padding: 0.6rem 1.3rem;
+  padding: 0.55rem 1.2rem;
   border: 2px solid var(--paper);
   border-radius: 2px;
   font-weight: 700;
-  font-size: 0.82rem;
-  box-shadow: 3px 3px 0 rgba(243, 235, 220, 0.45);
+  font-size: 0.8rem;
+  box-shadow: 3px 3px 0 rgba(243, 235, 220, 0.4);
   transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, color 0.16s ease;
+  will-change: transform;
 }
 
 .gamme:hover .gamme-go {
@@ -434,6 +484,12 @@ img { max-width: 100%; display: block; }
   box-shadow: 6px 6px 0 var(--red);
   background: var(--paper);
   color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .gamme { width: 100%; min-height: 52svh; }
+  .gamme--left, .gamme--right { align-self: stretch; text-align: left; align-items: flex-start; }
+  .gamme-lines { width: 120vw; }
 }
 
 /* ============================================================

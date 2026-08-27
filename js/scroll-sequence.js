@@ -33,6 +33,7 @@
   var flash = document.getElementById("packFlash");
   var rays = document.getElementById("packRays");
   var gammes = document.getElementById("gammes");
+  var intro = document.querySelector(".intro");
 
   var frameUrls = buildFrameList();
   var images = [];
@@ -145,8 +146,13 @@
       scrollTrigger: {
         // La section des gammes défile normalement ; on se contente de lire
         // où elle en est. Pas de pin, pas de sticky, pas de pause.
-        trigger: gammes,
+        //
+        // Le départ est calé sur l'intro, pas sur le haut des gammes : le
+        // paquet réagit dès le premier cran de molette au lieu d'attendre
+        // qu'un écran entier soit passé.
+        trigger: intro,
         start: "top top",
+        endTrigger: gammes,
         end: "bottom bottom",
         scrub: true,
         invalidateOnRefresh: true
@@ -167,7 +173,7 @@
 
     tl.fromTo(rays,
       { opacity: 0, scale: 0.72, rotate: 0 },
-      { opacity: 0.45, scale: 1.08, rotate: 14, duration: 22, ease: "power1.out" }, 30)
+      { opacity: 0.28, scale: 1.08, rotate: 14, duration: 22, ease: "power1.out" }, 30)
       .to(rays, { opacity: 0, scale: 1.3, duration: 14, ease: "power1.in" }, 58);
 
     // Éclat : les étincelles jaillissent.
