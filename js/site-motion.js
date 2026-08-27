@@ -15,7 +15,7 @@
 
     if (reduced) {
       // Pas de mouvement : tout est visible d'emblée.
-      gsap.set("[data-reveal], [data-stagger] > *, [data-pop]", { opacity: 1, y: 0, rotate: 0, scale: 1 });
+      gsap.set("[data-reveal], [data-stagger] > *, [data-pop], .gamme", { opacity: 1, y: 0, rotate: 0, scale: 1 });
       splitTitle(true);
       return;
     }
@@ -23,10 +23,9 @@
     splitTitle(false);
     revealBlocks();
     staggerGroups();
-    settleTilts();
+    revealGammes();
     popBubbles();
     parallaxTextures();
-    breathePack();
 
     ScrollTrigger.refresh();
   }
@@ -92,25 +91,16 @@
     });
   }
 
-  /* ---------- cartes catégories : arrivent penchées, se stabilisent ---------- */
+  /* ---------- gammes : entrée/sortie douce au passage ---------- */
 
-  function settleTilts() {
-    gsap.utils.toArray("[data-tilt]").forEach(function (el) {
-      var finalAngle = parseFloat(el.dataset.tilt) || 0;
+  function revealGammes() {
+    gsap.utils.toArray(".gamme").forEach(function (el) {
       gsap.fromTo(el,
-        { rotate: finalAngle - 9, y: 34 },
+        { opacity: 0, y: 46 },
         {
-          rotate: finalAngle, y: 0,
-          duration: 0.85, ease: "back.out(1.7)",
-          scrollTrigger: { trigger: el, start: "top 84%", once: true }
+          opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
+          scrollTrigger: { trigger: el, start: "top 78%", end: "bottom 22%", toggleActions: "play none none reverse" }
         });
-      // le survol redresse la carte (voir .cat:hover)
-      el.addEventListener("mouseenter", function () {
-        gsap.to(el, { rotate: 0, duration: 0.22, ease: "power2.out", overwrite: "auto" });
-      });
-      el.addEventListener("mouseleave", function () {
-        gsap.to(el, { rotate: finalAngle, duration: 0.3, ease: "power2.out", overwrite: "auto" });
-      });
     });
   }
 
@@ -147,36 +137,6 @@
           }
         });
     });
-  }
-
-  /* ---------- le paquet "respire" tant qu'il est scellé ---------- */
-
-  function breathePack() {
-    var shake = document.getElementById("packShake");
-    if (!shake) return;
-
-    var breath = gsap.to(shake, {
-      scale: 1.02,
-      duration: 2.4,
-      ease: "sine.inOut",
-      repeat: -1,
-      yoyo: true,
-      paused: true
-    });
-
-    // La respiration ne tourne que sur la toute première phase du hero,
-    // pour ne jamais se superposer à la séquence d'ouverture.
-    ScrollTrigger.create({
-      trigger: "#pack",
-      start: "top top",
-      end: "top top-=12%",
-      onEnter: function () { breath.play(); },
-      onLeave: function () { breath.pause(); gsap.set(shake, { scale: 1 }); },
-      onEnterBack: function () { breath.play(); },
-      onLeaveBack: function () { breath.pause(); gsap.set(shake, { scale: 1 }); }
-    });
-
-    breath.play();
   }
 
   if (document.readyState === "loading") {

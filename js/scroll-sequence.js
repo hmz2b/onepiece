@@ -1,13 +1,18 @@
 /**
- * Hero — séquence image par image pilotée par le SCROLL DE PAGE.
+ * Le paquet en calque de fond, ouvert par le scroll de page.
  *
- * Règle absolue respectée ici :
+ * Principe : le canvas vit dans un `position: fixed` DERRIÈRE le contenu.
+ * La section « Les gammes » défile par-dessus comme n'importe quelle section
+ * de page — elle n'est ni épinglée ni collée — et sa progression choisit la
+ * frame affichée au fond. L'utilisateur ne s'arrête donc jamais : le contenu
+ * avance en continu pendant que le paquet s'ouvre derrière.
+ *
+ * Le scroll reste strictement natif :
  *   - aucun preventDefault sur wheel / touchmove / scroll
  *   - aucune écriture de scrollTop / scrollTo / scrollBy
- *   - aucun conteneur scrollable qui intercepte le geste
- *   - `position: sticky` est purement visuel (CSS), pas un mécanisme de capture
- *   - ScrollTrigger (scrub) LIT la position de scroll, il ne l'écrit jamais.
- *     On n'utilise pas `pin`, pour rester sur du sticky CSS pur.
+ *   - aucun conteneur scrollable, aucun `pin`, aucun `position: sticky`
+ *   - le calque de fond est en `pointer-events: none`
+ *   - ScrollTrigger est en `scrub` : il LIT la position, jamais l'inverse.
  */
 (function () {
   "use strict";
@@ -18,21 +23,16 @@
   var MAX_DPR = 2;
   var SPARK_COUNT = 22;
 
-  var section = document.getElementById("pack");
-  var stage = section.querySelector(".pack-stage");
-  var shake = document.getElementById("packShake");
+  var layer = document.getElementById("packbg");
   var canvas = document.getElementById("packCanvas");
   var ctx = canvas.getContext("2d");
   var loader = document.getElementById("loader");
   var loaderFill = document.getElementById("loaderFill");
   var loaderPct = document.getElementById("loaderPct");
-  var railFill = document.getElementById("packRailFill");
   var burst = document.getElementById("packBurst");
   var flash = document.getElementById("packFlash");
   var rays = document.getElementById("packRays");
-  var stampSealed = document.getElementById("stampSealed");
-  var stampChecked = document.getElementById("stampChecked");
-  var caps = Array.prototype.slice.call(section.querySelectorAll(".pack-cap"));
+  var gammes = document.getElementById("gammes");
 
   var frameUrls = buildFrameList();
   var images = [];
@@ -52,8 +52,8 @@
 
   function resizeCanvas() {
     var dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-    var w = stage.clientWidth;
-    var h = stage.clientHeight;
+    var w = layer.clientWidth;
+    var h = layer.clientHeight;
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     canvas.style.width = w + "px";
@@ -134,7 +134,7 @@
     return sparks;
   }
 
-  /* ---------- séquence maîtresse ---------- */
+  /* ---------- séquence ---------- */
 
   function buildTimeline() {
     var proxy = { f: 0 };
@@ -143,80 +143,59 @@
     var tl = gsap.timeline({
       defaults: { ease: "none" },
       scrollTrigger: {
-        trigger: section,
+        // La section des gammes défile normalement ; on se contente de lire
+        // où elle en est. Pas de pin, pas de sticky, pas de pause.
+        trigger: gammes,
         start: "top top",
         end: "bottom bottom",
-        scrub: true,              // lit le scroll, ne l'écrit jamais
-        invalidateOnRefresh: true,
-        onUpdate: function (self) {
-          railFill.style.width = (self.progress * 100).toFixed(2) + "%";
-        }
+        scrub: true,
+        invalidateOnRefresh: true
       }
     });
 
-    // Piste principale : la position de scroll choisit la frame (0 → 100).
     tl.to(proxy, {
       f: last,
       duration: 100,
-      onUpdate: function () {
-        drawFrame(Math.round(proxy.f));
-      }
+      onUpdate: function () { drawFrame(Math.round(proxy.f)); }
     }, 0);
 
-    // Légendes d'étape — une seule à l'écran à la fois.
-    var windows = [[1, 15], [21, 39], [47, 67], [80, 99]];
-    caps.forEach(function (cap, i) {
-      var w = windows[i];
-      tl.fromTo(cap,
-        { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 3, ease: "power2.out",
-          onStart: function () { cap.classList.add("is-on"); },
-          onReverseComplete: function () { cap.classList.remove("is-on"); } },
-        w[0]);
-      tl.to(cap, { opacity: 0, y: -12, duration: 3, ease: "power2.in" }, w[1]);
+    if (reduced) return tl;
+
+    // Déchirure : éclat lumineux puis rayons.
+    tl.fromTo(flash, { opacity: 0 }, { opacity: 0.8, duration: 2.5, ease: "power2.out" }, 24)
+      .to(flash, { opacity: 0, duration: 6, ease: "power2.in" }, 27);
+
+    tl.fromTo(rays,
+      { opacity: 0, scale: 0.72, rotate: 0 },
+      { opacity: 0.45, scale: 1.08, rotate: 14, duration: 22, ease: "power1.out" }, 30)
+      .to(rays, { opacity: 0, scale: 1.3, duration: 14, ease: "power1.in" }, 58);
+
+    // Éclat : les étincelles jaillissent.
+    buildSparks().forEach(function (s, i) {
+      tl.fromTo(s.el,
+        { opacity: 0, x: 0, y: 0, scale: 0.35, rotate: 0 },
+        { opacity: 1, x: s.x, y: s.y, scale: 1, rotate: (i % 2 ? 190 : -160),
+          duration: 20, ease: "power3.out" },
+        44 + (i % 6) * 0.7);
+      tl.to(s.el, { opacity: 0, scale: 0.5, duration: 12, ease: "power1.in" }, 66 + (i % 6) * 0.7);
     });
 
-    // Tampon SCELLÉ — coup sec avec dépassement.
-    tl.fromTo(stampSealed,
-      { opacity: 0, scale: 1.45, rotate: -13 },
-      { opacity: 1, scale: 1, rotate: -13, duration: 3, ease: "back.out(3)" }, 2);
-    tl.to(stampSealed, { opacity: 0, scale: 0.94, duration: 3 }, 17);
-
-    if (!reduced) {
-      // Étape 1 — vibration : le paquet s'agite avant de céder.
-      tl.to(shake, { x: -5, y: 3, duration: 1.6, ease: "power1.inOut" }, 3)
-        .to(shake, { x: 6, y: -3, duration: 1.6, ease: "power1.inOut" }, 6)
-        .to(shake, { x: -7, y: 4, duration: 1.6, ease: "power1.inOut" }, 9)
-        .to(shake, { x: 5, y: -4, duration: 1.6, ease: "power1.inOut" }, 12)
-        .to(shake, { x: 0, y: 0, duration: 2.4, ease: "power2.out" }, 15);
-
-      // Étape 2 — déchirure : éclat lumineux + rayons.
-      tl.fromTo(flash, { opacity: 0 }, { opacity: 0.85, duration: 2.5, ease: "power2.out" }, 24)
-        .to(flash, { opacity: 0, duration: 6, ease: "power2.in" }, 27);
-
-      tl.fromTo(rays,
-        { opacity: 0, scale: 0.72, rotate: 0 },
-        { opacity: 0.5, scale: 1.08, rotate: 14, duration: 22, ease: "power1.out" }, 30)
-        .to(rays, { opacity: 0, scale: 1.3, duration: 14, ease: "power1.in" }, 58);
-
-      // Étape 3 — éclat : les cartes/étincelles jaillissent.
-      var sparks = buildSparks();
-      sparks.forEach(function (s, i) {
-        tl.fromTo(s.el,
-          { opacity: 0, x: 0, y: 0, scale: 0.35, rotate: 0 },
-          { opacity: 1, x: s.x, y: s.y, scale: 1, rotate: (i % 2 ? 190 : -160),
-            duration: 20, ease: "power3.out" },
-          44 + (i % 6) * 0.7);
-        tl.to(s.el, { opacity: 0, scale: 0.5, duration: 12, ease: "power1.in" }, 66 + (i % 6) * 0.7);
-      });
-    }
-
-    // Étape 4 — stabilisation : tampon VÉRIFIÉ.
-    tl.fromTo(stampChecked,
-      { opacity: 0, scale: 1.5, rotate: 9 },
-      { opacity: 1, scale: 1, rotate: 9, duration: 4, ease: "back.out(2.6)" }, 82);
-
     return tl;
+  }
+
+  /* ---------- le calque s'efface une fois les gammes passées ---------- */
+
+  function fadeLayerAfterGammes() {
+    gsap.to(layer, {
+      opacity: 0,
+      ease: "none",
+      scrollTrigger: {
+        trigger: gammes,
+        start: "bottom bottom",
+        end: "bottom top+=25%",
+        scrub: true
+      }
+    });
   }
 
   /* ---------- resize ---------- */
@@ -226,11 +205,9 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
       resizeCanvas();
-      if (window.ScrollTrigger) ScrollTrigger.refresh();
+      ScrollTrigger.refresh();
     }, 140);
   }
-
-  /* ---------- init ---------- */
 
   function init() {
     resizeCanvas();
@@ -240,9 +217,9 @@
       resizeCanvas();
       gsap.registerPlugin(ScrollTrigger);
       buildTimeline();
+      fadeLayerAfterGammes();
       ScrollTrigger.refresh();
       loader.classList.add("is-done");
-      document.dispatchEvent(new CustomEvent("pack:ready"));
     });
   }
 

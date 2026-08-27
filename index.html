@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grand Line Cards — Boutique One Piece TCG</title>
-<meta name="description" content="Boosters, decks et cartes rares One Piece Card Game. Authentifiés, expédiés sous 24h.">
+<meta name="description" content="Boosters, coffrets, decks et cartes à l'unité One Piece Card Game. Authentifiés, expédiés sous 24h.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=Bangers&display=swap" rel="stylesheet">
@@ -12,13 +12,30 @@
 </head>
 <body>
 
+<!-- ══════════ CALQUE DE FOND ══════════
+     Le paquet vit ici, en position: fixed, DERRIÈRE le contenu.
+     La page défile normalement par-dessus : rien n'est jamais figé. -->
+<div class="packbg" id="packbg" aria-hidden="true">
+  <canvas id="packCanvas" class="packbg__canvas"></canvas>
+  <div class="packbg__burst" id="packBurst"></div>
+  <div class="packbg__rays" id="packRays"></div>
+  <div class="packbg__flash" id="packFlash"></div>
+  <div class="packbg__veil"></div>
+</div>
+
+<div class="packbg-loader" id="loader" aria-hidden="true">
+  <div class="packbg-loader__mark">☠</div>
+  <div class="packbg-loader__bar"><i id="loaderFill"></i></div>
+  <div class="packbg-loader__pct"><span id="loaderPct">0</span>%</div>
+</div>
+
 <header class="topbar">
   <a href="#top" class="brand">
     <span class="brand-mark">☠</span>
     <span class="brand-name">GRAND LINE<em>CARDS</em></span>
   </a>
   <nav class="topnav">
-    <a href="#categories">Catégories</a>
+    <a href="#gammes">Le rayon</a>
     <a href="#boutique">Boutique</a>
     <a href="#avis">Avis</a>
   </nav>
@@ -29,94 +46,50 @@
 
   <!-- ══════════ INTRO ══════════ -->
   <section class="intro">
-    <div class="tex tex-halftone" data-parallax="0.25"></div>
-    <div class="tex tex-speed" data-parallax="0.5"></div>
-
-    <p class="eyebrow" data-reveal>Nouveau — OP-17 · Les guerriers les plus puissants</p>
+    <p class="eyebrow" data-reveal>OP-17 · Les guerriers les plus puissants</p>
     <h1 class="intro-title" data-split>Chaque paquet cache un trésor.</h1>
-    <p class="intro-sub" data-reveal>Scrolle pour l'ouvrir.</p>
-    <div class="intro-cue" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+    <p class="intro-sub" data-reveal>Boosters, coffrets et cartes à l'unité — expédiés sous 24h.</p>
+    <div class="intro-cue"><span>Continue</span>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
         <path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
   </section>
 
-  <!-- ══════════ HERO : SÉQUENCE PILOTÉE PAR LE SCROLL DE PAGE ══════════
-       Hauteur de scroll dédiée (100vh collant + 200vh de course).
-       position:sticky est purement visuel — aucun scroll n'est capturé,
-       intercepté ni réécrit. ScrollTrigger LIT la position, jamais l'inverse. -->
-  <section class="pack" id="pack" aria-label="Ouverture d'un booster One Piece au scroll">
+  <!-- ══════════ LES GAMMES ══════════
+       Section de page tout ce qu'il y a de plus normale : elle défile
+       de haut en bas sans jamais être épinglée. Le paquet s'ouvre
+       derrière elle, au rythme de ce défilement. -->
+  <section class="gammes" id="gammes">
 
-    <div class="pack-loader" id="loader">
-      <div class="pack-loader__mark">☠</div>
-      <div class="pack-loader__bar"><i id="loaderFill"></i></div>
-      <div class="pack-loader__pct"><span id="loaderPct">0</span>%</div>
-    </div>
+    <a class="gamme" href="#boutique">
+      <span class="gamme-rank">Gamme 01</span>
+      <h2 class="gamme-name">Boosters</h2>
+      <p class="gamme-copy">12 cartes par paquet, 1 rare garantie. OP-01 à OP-17, japonais et français.</p>
+      <span class="gamme-go">Voir les boosters →</span>
+    </a>
 
-    <div class="pack-stage">
-      <div class="pack-shake" id="packShake">
-        <canvas id="packCanvas" class="pack-canvas"></canvas>
-      </div>
+    <a class="gamme" href="#boutique">
+      <span class="gamme-rank">Gamme 02</span>
+      <h2 class="gamme-name">Coffrets</h2>
+      <p class="gamme-copy">12 boosters scellés, carton d'origine jamais ouvert. Le format collection.</p>
+      <span class="gamme-go">Voir les coffrets →</span>
+    </a>
 
-      <div class="pack-burst" id="packBurst" aria-hidden="true"></div>
-      <div class="pack-flash" id="packFlash" aria-hidden="true"></div>
-      <div class="pack-rays" id="packRays" aria-hidden="true"></div>
+    <a class="gamme" href="#boutique">
+      <span class="gamme-rank">Gamme 03</span>
+      <h2 class="gamme-name">Decks</h2>
+      <p class="gamme-copy">51 cartes prêtes à jouer, sorties de la boîte et légales en tournoi.</p>
+      <span class="gamme-go">Voir les decks →</span>
+    </a>
 
-      <div class="stamp stamp-sealed" id="stampSealed" aria-hidden="true">Scellé</div>
-      <div class="stamp stamp-checked" id="stampChecked" aria-hidden="true">Vérifié</div>
+    <a class="gamme" href="#boutique">
+      <span class="gamme-rank">Gamme 04</span>
+      <h2 class="gamme-name">Cartes à l'unité</h2>
+      <p class="gamme-copy">SEC, SR, Manga Rare et Parallel. Cotées, vérifiées, garanties authentiques.</p>
+      <span class="gamme-go">Voir les cartes →</span>
+    </a>
 
-      <div class="pack-cap" data-stage="1">
-        <p class="pack-cap__step">01 — Scellé</p>
-        <h2 class="pack-cap__title">Il bouge encore.</h2>
-      </div>
-      <div class="pack-cap" data-stage="2">
-        <p class="pack-cap__step">02 — Déchirure</p>
-        <h2 class="pack-cap__title">Le foil cède.</h2>
-      </div>
-      <div class="pack-cap" data-stage="3">
-        <p class="pack-cap__step">03 — Éclat</p>
-        <h2 class="pack-cap__title">Douze cartes en l'air.</h2>
-      </div>
-      <div class="pack-cap" data-stage="4">
-        <p class="pack-cap__step">04 — Le tirage</p>
-        <h2 class="pack-cap__title">Loki, Prince d'Elbaph.</h2>
-        <a href="#categories" class="btn btn-red">Ouvrir la boutique</a>
-      </div>
-
-      <div class="pack-rail" aria-hidden="true"><i id="packRailFill"></i></div>
-    </div>
-  </section>
-
-  <!-- ══════════ CATÉGORIES ══════════ -->
-  <section class="slab slab-paper" id="categories">
-    <div class="tex tex-halftone" data-parallax="0.18"></div>
-
-    <header class="slab-head">
-      <p class="eyebrow" data-reveal>Le rayon</p>
-      <h2 class="slab-title" data-reveal>Par où tu commences ?</h2>
-    </header>
-
-    <div class="cats" data-stagger>
-      <a class="cat" href="#boutique" data-tilt="-3.5">
-        <span class="cat-num">Boosters</span>
-        <h3 class="cat-title">Paquets scellés</h3>
-        <p class="cat-copy">OP-01 à OP-17, japonais et français. Cartons complets ou à l'unité.</p>
-        <span class="cat-go">Voir les boosters →</span>
-      </a>
-      <a class="cat" href="#boutique" data-tilt="2.5">
-        <span class="cat-num">Decks</span>
-        <h3 class="cat-title">Prêts à jouer</h3>
-        <p class="cat-copy">Starter decks équilibrés, sortis de la boîte et jouables en tournoi.</p>
-        <span class="cat-go">Voir les decks →</span>
-      </a>
-      <a class="cat" href="#boutique" data-tilt="-1.5">
-        <span class="cat-num">Singles</span>
-        <h3 class="cat-title">Cartes rares</h3>
-        <p class="cat-copy">SEC, SR, Manga Rare et Parallel. Cotées, gradées, garanties authentiques.</p>
-        <span class="cat-go">Voir les singles →</span>
-      </a>
-    </div>
   </section>
 
   <!-- ══════════ BOUTIQUE ══════════ -->
@@ -133,25 +106,29 @@
         <div class="prod-top"><span class="badge">OP-17</span><span class="prod-tag">Booster</span></div>
         <h3 class="prod-title">Les guerriers les plus puissants</h3>
         <p class="prod-meta">12 cartes · 1 rare garantie</p>
+        <p class="prod-seal">Scellé d'origine</p>
         <div class="prod-foot"><span class="price">4,90 €</span><button class="btn btn-red btn-sm">Ajouter</button></div>
+      </article>
+      <article class="prod">
+        <div class="prod-top"><span class="badge">Carton</span><span class="prod-tag">Coffret</span></div>
+        <h3 class="prod-title">Coffret OP-17 — 12 boosters</h3>
+        <p class="prod-meta">144 cartes · carton complet</p>
+        <p class="prod-seal">Scellé d'origine</p>
+        <div class="prod-foot"><span class="price">54,90 €</span><button class="btn btn-red btn-sm">Ajouter</button></div>
       </article>
       <article class="prod">
         <div class="prod-top"><span class="badge">ST-21</span><span class="prod-tag">Deck</span></div>
         <h3 class="prod-title">Starter Deck — EX Gear 5</h3>
         <p class="prod-meta">51 cartes · prêt à jouer</p>
+        <p class="prod-seal">Scellé d'origine</p>
         <div class="prod-foot"><span class="price">17,90 €</span><button class="btn btn-red btn-sm">Ajouter</button></div>
       </article>
       <article class="prod">
-        <div class="prod-top"><span class="badge">SEC</span><span class="prod-tag">Single</span></div>
+        <div class="prod-top"><span class="badge">SEC</span><span class="prod-tag">À l'unité</span></div>
         <h3 class="prod-title">Loki — Prince d'Elbaph</h3>
         <p class="prod-meta">Secret Rare · état NM</p>
+        <p class="prod-seal">Authentifiée</p>
         <div class="prod-foot"><span class="price">89,00 €</span><button class="btn btn-red btn-sm">Ajouter</button></div>
-      </article>
-      <article class="prod">
-        <div class="prod-top"><span class="badge">MR</span><span class="prod-tag">Single</span></div>
-        <h3 class="prod-title">Shanks — Manga Rare</h3>
-        <p class="prod-meta">Alt art · état NM</p>
-        <div class="prod-foot"><span class="price">142,00 €</span><button class="btn btn-red btn-sm">Ajouter</button></div>
       </article>
     </div>
   </section>
@@ -171,11 +148,11 @@
         <cite>— Théo, Lyon</cite>
       </blockquote>
       <blockquote class="bubble bubble-alt" data-pop>
-        <p>Les singles sont vraiment en état NM, pas du « NM » approximatif.</p>
+        <p>Les cartes à l'unité sont vraiment en état NM, pas du « NM » approximatif.</p>
         <cite>— Inès, Bordeaux</cite>
       </blockquote>
       <blockquote class="bubble" data-pop>
-        <p>Le dernier carton est parti en 40 minutes. J'ai eu le mien de justesse.</p>
+        <p>Le dernier coffret est parti en 40 minutes. J'ai eu le mien de justesse.</p>
         <cite>— Karim, Lille</cite>
       </blockquote>
     </div>

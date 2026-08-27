@@ -27,7 +27,6 @@
   --heavy:   "Archivo Black", "Archivo", sans-serif;
 
   --topbar-h: 68px;
-  --hero-run: 200vh;      /* course de scroll dédiée au hero */
 }
 
 /* thème sombre (planche encrée) — OS sombre, sauf choix explicite "light" */
@@ -178,82 +177,23 @@ img { max-width: 100%; display: block; }
 
 .btn-sm { padding: 0.5rem 1rem; font-size: 0.78rem; }
 
-/* ---------- intro ---------- */
-
-.intro {
-  position: relative;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.1rem;
-  text-align: center;
-  padding: calc(var(--topbar-h) + 2rem) 1.5rem 4rem;
-  background: var(--ground);
-  overflow: hidden;
-}
-
-.intro > *:not(.tex) { position: relative; z-index: 1; }
-
-.eyebrow {
-  font-family: var(--heavy);
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--red);
-}
-
-.intro-title {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(2.6rem, 9vw, 6.5rem);
-  line-height: 0.98;
-  letter-spacing: 0.015em;
-  text-wrap: balance;
-  max-width: 14ch;
-}
-
-.intro-title .word {
-  display: inline-block;
-  will-change: transform, opacity;
-}
-
-.intro-sub { color: var(--text-dim); font-size: clamp(1rem, 2vw, 1.15rem); }
-
-.intro-cue { color: var(--red); animation: cue 1.7s ease-in-out infinite; }
-
-@keyframes cue {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(7px); }
-}
-
 /* ============================================================
-   HERO — séquence image par image
-   Course dédiée : 100vh collant + --hero-run de défilement.
+   CALQUE DE FOND — le paquet
+   position: fixed, derrière tout le contenu. La page défile
+   normalement par-dessus : aucun pin, aucun sticky, aucune pause.
    ============================================================ */
 
-.pack {
-  position: relative;
-  height: calc(100svh + var(--hero-run));
-  background: #0B0B0C;
-}
-
-.pack-stage {
-  position: sticky;      /* purement visuel : ne capture aucun geste */
-  top: 0;
-  height: 100svh;
+.packbg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
   overflow: hidden;
   background: #0B0B0C;
+  pointer-events: none;   /* ne capte jamais un geste : le scroll passe au travers */
+  will-change: opacity;
 }
 
-.pack-shake {
-  position: absolute;
-  inset: 0;
-  will-change: transform;
-}
-
-.pack-canvas {
+.packbg__canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -261,39 +201,43 @@ img { max-width: 100%; display: block; }
   display: block;
 }
 
-/* éclat lumineux au moment de la déchirure */
-.pack-flash {
+/* voile : assombrit le fond pour que le texte reste lisible par-dessus */
+.packbg__veil {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  background:
+    /* bande basse assombrie : c'est là que le texte se pose */
+    linear-gradient(to bottom,
+      rgba(11, 11, 12, 0.55) 0%,
+      rgba(11, 11, 12, 0.12) 30%,
+      rgba(11, 11, 12, 0.14) 46%,
+      rgba(11, 11, 12, 0.88) 88%,
+      rgba(11, 11, 12, 0.94) 100%),
+    /* vignette douce, le centre reste clair pour le paquet */
+    radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(11, 11, 12, 0.5) 100%);
+}
+
+.packbg__flash {
+  position: absolute;
+  inset: 0;
   opacity: 0;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 46%, rgba(255, 240, 200, 0.95), transparent 55%);
+  background: radial-gradient(circle at 50% 46%, rgba(255, 240, 200, 0.9), transparent 55%);
   will-change: opacity;
 }
 
-/* rayons façon case de manga */
-.pack-rays {
+.packbg__rays {
   position: absolute;
   inset: -30%;
-  z-index: 1;
   opacity: 0;
-  pointer-events: none;
   background: repeating-conic-gradient(
     from 0deg at 50% 50%,
-    rgba(255, 236, 200, 0.42) 0deg 2.2deg,
+    rgba(255, 236, 200, 0.4) 0deg 2.2deg,
     transparent 2.2deg 7deg
   );
   will-change: transform, opacity;
 }
 
-/* particules d'éclat */
-.pack-burst {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
+.packbg__burst { position: absolute; inset: 0; }
 
 .spark {
   position: absolute;
@@ -310,123 +254,32 @@ img { max-width: 100%; display: block; }
 .spark.spark-red  { background: var(--red); }
 .spark.spark-pale { background: #FFF2D6; }
 
-/* tampons d'encre */
-.stamp {
-  position: absolute;
-  z-index: 5;
-  font-family: var(--heavy);
-  font-size: clamp(0.85rem, 2.1vw, 1.35rem);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  padding: 0.5rem 1.1rem;
-  border: 3px solid currentColor;
-  border-radius: 3px;
-  /* encre tamponnée sur papier : garantit le contraste sur des frames claires */
-  background: rgba(243, 235, 220, 0.9);
-  opacity: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-.stamp-sealed {
-  top: calc(var(--topbar-h) + 3vh);
-  right: 6vw;
-  color: var(--red-deep);
-  transform: rotate(-13deg);
-}
-
-.stamp-checked {
-  top: calc(var(--topbar-h) + 3vh);
-  left: 6vw;
-  color: #8A5E12;
-  transform: rotate(9deg);
-}
-
-/* légendes d'étape */
-.pack-cap {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(3.5rem, 9vh, 6rem);
-  width: min(88vw, 540px);
-  transform: translate(-50%, 14px);
-  text-align: center;
-  z-index: 4;
-  opacity: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-  /* cartouche d'encre façon case de manga : lisible quelle que soit la frame */
-  background: var(--ink);
-  color: var(--paper);
-  border: 2.5px solid var(--paper);
-  border-radius: 3px;
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
-  padding: 1.1rem 1.6rem 1.3rem;
-}
-
-.pack-cap.is-on { pointer-events: auto; }
-
-.pack-cap__step {
-  font-family: var(--heavy);
-  font-size: 0.68rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 0.4rem;
-}
-
-.pack-cap__title {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(1.7rem, 4.6vw, 2.7rem);
-  line-height: 1.05;
-  color: var(--paper);
-}
-
-.pack-cap .btn { margin-top: 1.3rem; }
-
-/* jauge de progression du hero */
-.pack-rail {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 4px;
-  background: rgba(255, 246, 236, 0.14);
-  z-index: 6;
-}
-
-.pack-rail i {
-  display: block;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--red), var(--gold));
-  will-change: width;
-}
-
 /* chargement */
-.pack-loader {
-  position: absolute;
+.packbg-loader {
+  position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 80;
   background: #0B0B0C;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  transition: opacity 0.45s ease;
+  transition: opacity 0.5s ease;
 }
 
-.pack-loader.is-done { opacity: 0; pointer-events: none; }
+.packbg-loader.is-done { opacity: 0; pointer-events: none; }
 
-.pack-loader__mark { font-size: 2rem; color: var(--red); animation: cue 1.4s ease-in-out infinite; }
+.packbg-loader__mark { font-size: 2rem; color: var(--red); animation: cue 1.4s ease-in-out infinite; }
 
-.pack-loader__bar {
+.packbg-loader__bar {
   width: min(64vw, 240px);
   height: 4px;
   background: rgba(255, 246, 236, 0.16);
   overflow: hidden;
 }
 
-.pack-loader__bar i {
+.packbg-loader__bar i {
   display: block;
   height: 100%;
   width: 0%;
@@ -434,11 +287,153 @@ img { max-width: 100%; display: block; }
   transition: width 0.15s ease;
 }
 
-.pack-loader__pct {
+.packbg-loader__pct {
   font-family: var(--heavy);
   font-size: 0.72rem;
   letter-spacing: 0.14em;
   color: #A79C8C;
+}
+
+/* Tout le contenu passe AU-DESSUS du calque de fond. */
+.topbar, main, .foot { position: relative; z-index: 1; }
+
+/* ---------- intro ---------- */
+
+.intro {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.9rem;
+  text-align: center;
+  padding: calc(var(--topbar-h) + 2rem) 1.5rem 8vh;
+  /* pas de fond : le paquet doit rester visible derrière */
+  color: var(--paper);
+}
+
+.intro .eyebrow { color: var(--gold); }
+.intro-sub { color: rgba(243, 235, 220, 0.82); }
+.intro-title { text-shadow: 0 4px 30px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.9); }
+.intro-sub, .intro .eyebrow { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
+
+.eyebrow {
+  font-family: var(--heavy);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+.intro-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2.3rem, 7vw, 5rem);
+  line-height: 0.98;
+  letter-spacing: 0.015em;
+  text-wrap: balance;
+  max-width: 14ch;
+}
+
+.intro-title .word {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.intro-sub { font-size: clamp(1rem, 2vw, 1.15rem); }
+
+.intro-cue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  font-family: var(--heavy);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  animation: cue 1.7s ease-in-out infinite;
+}
+
+@keyframes cue {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(7px); }
+}
+
+/* ============================================================
+   LES GAMMES — section de page normale qui défile par-dessus
+   le paquet. Aucun pin, aucun sticky : le scroll ne s'arrête pas.
+   ============================================================ */
+
+.gammes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 clamp(1.25rem, 5vw, 3rem);
+  color: var(--paper);
+}
+
+.gamme {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* le texte se pose dans la bande basse : le paquet reste dégagé au centre */
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-height: 100svh;
+  padding-bottom: 9vh;
+  width: min(92vw, 620px);
+  text-align: center;
+  will-change: transform, opacity;
+}
+
+.gamme-rank {
+  font-family: var(--heavy);
+  font-size: 0.64rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.gamme-name {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 8vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.9);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.gamme:hover .gamme-name { transform: translateY(-4px); color: var(--gold); }
+
+.gamme-copy {
+  max-width: 34ch;
+  font-size: clamp(0.95rem, 1.9vw, 1.05rem);
+  color: rgba(243, 235, 220, 0.85);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.gamme-go {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.3rem;
+  border: 2px solid var(--paper);
+  border-radius: 2px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  box-shadow: 3px 3px 0 rgba(243, 235, 220, 0.45);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.gamme:hover .gamme-go {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--red);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 /* ============================================================
@@ -478,48 +473,6 @@ img { max-width: 100%; display: block; }
   margin-top: 0.4rem;
   text-wrap: balance;
 }
-
-/* ---------- catégories ---------- */
-
-.cats {
-  max-width: 1120px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(1rem, 2.5vw, 1.75rem);
-}
-
-.cat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: clamp(1.4rem, 3vw, 2rem);
-  background: var(--card);
-  border: 2px solid var(--text);
-  border-radius: 3px;
-  box-shadow: 5px 5px 0 var(--text);
-  will-change: transform;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.cat:hover {
-  transform: translate(-3px, -4px) rotate(0deg);
-  box-shadow: 10px 11px 0 var(--red);
-}
-
-.cat-num {
-  font-family: var(--heavy);
-  font-size: 0.66rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--red);
-}
-
-.cat-title { font-family: var(--display); font-weight: 400; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.05; }
-.cat-copy { color: var(--text-dim); font-size: 0.92rem; }
-.cat-go { margin-top: auto; padding-top: 0.6rem; font-weight: 700; font-size: 0.85rem; color: var(--red); }
-
-@media (max-width: 860px) { .cats { grid-template-columns: 1fr; } }
 
 /* ---------- produits ---------- */
 
@@ -564,6 +517,19 @@ img { max-width: 100%; display: block; }
 .prod-tag { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
 .prod-title { font-size: 1rem; font-weight: 700; line-height: 1.3; }
 .prod-meta { font-size: 0.8rem; color: var(--text-dim); }
+
+.prod-seal {
+  align-self: flex-start;
+  font-family: var(--heavy);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  padding: 0.15rem 0.45rem;
+  transform: rotate(-2deg);
+}
 
 .prod-foot {
   margin-top: auto;
